@@ -20,7 +20,7 @@
 
 .left-w,
 .right-w {
-    width: 700px !important;
+    width: 49% !important;
     min-width: 700px !important;
 }
 </style>

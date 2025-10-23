@@ -1,25 +1,152 @@
 <template>
-    <div>
+    <div id="app">
+        <div class="navbar">
+            <img src="./assets/logo.svg" alt="logo" class="logo" />
+            <div class="filter-div">
+                <div class="chips">
+                    <span class="chip" v-for="item in filteredItems" @click="removeItem(item)">{{ item }}</span>
+                </div>
+                <input type="text" @input="updateSearch($event)" @focus="activate" @blur="deactivate" />
+                <button @click="updateFilter">Filter</button>
+            </div>
+            <div class="search-modal" v-if="search_active" @mousedown.prevent>
+                <span v-for="(item, i) in items_qs" @click="addItem(item)">
+                    {{ item }}
+                </span>
+            </div>
+        </div>
+
         <div class="application" v-if="dataLoaded">
             <SalesCharts :salesData="monthlyBranchTotals" :hourlySalesData="hourlyBranchTotals" />
-            <br>
-            <ItemWiseSection :itemWiseList="itemWiseList" class="component" />
-            <div class="dum" style="height: 100vh;"></div>
+            <ItemWiseSection :key="itemKey" :itemWiseList="itemWiseList" />
+            <div class="dum"></div>
         </div>
-        <div v-else>
+
+        <div v-else class="wrapper">
             <UploadFileCard @fileUploaded="processData" />
         </div>
-        <!-- <AdditionalComponents /> -->
     </div>
 </template>
 
-<style>
-.application {
-    display: block;
+<style scoped>
+#app,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, sans-serif;
 }
 
-.component {
-    max-width: 100%;
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(24, 24, 24, 0.1);
+    padding: 10px 20px;
+    backdrop-filter: blur(20px);
+    box-sizing: border-box;
+}
+
+.logo {
+    height: 40px;
+}
+
+.filter-div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-div input {
+    border: 1px solid #c3c3c3;
+    border-radius: 4px;
+    padding: 8px;
+    outline: none;
+    width: 250px;
+}
+
+.filter-div button {
+    background-color: #007bff !important;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.filter-div .chips {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-width: 400px;
+}
+
+.filter-div .chips span {
+    background-color: #c3c3c3;
+    border-radius: 12px;
+    padding: 4px;
+    font-size: 8px;
+}
+
+.search-modal {
+    width: 300px;
+    background-color: #fff;
+    padding: 12px;
+    color: #000;
+    position: fixed;
+    top: 100%;
+    right: 3%;
+    border: 1px solid #c3c3c3;
+    overflow-y: scroll;
+    font-size: 10px;
+    max-height: 400px;
+}
+
+.search-modal span {
+    display: block;
+    cursor: pointer;
+}
+
+.search-modal span:hover {
+    background-color: #c3c3c3;
+}
+
+.application {
+    position: relative;
+    z-index: 1;
+    padding-top: 80px;
+}
+
+.dum {
+    height: 100vh;
+}
+
+@media (max-width: 768px) {
+    .filter-div input {
+        width: 150px;
+    }
+
+    .logo {
+        height: 30px;
+    }
+}
+</style>
+
+<style scoped>
+.wrapper {
+    position: absolute;
+    top: 25%;
+    left: 40%;
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(15px);
+    display: block;
+    overflow-x: hidden;
+    z-index: 1;
 }
 </style>
 
@@ -44,17 +171,53 @@ export default {
             rawDataBody: [],
             monthlyBranchTotals: {},
             hourlyBranchTotals: {},
-            itemWiseList: {}
+            itemWiseList: {},
+            filteredItems: [],
+            itemKey: 0,
+            items: [],
+            items_qs: [],
+            search_active: false
         }
     },
     methods: {
+
+        updateFilter() {
+            this.formatProducts(this.rawDataBody, 10);
+            this.itemKey = Date.now(); // forces ItemWiseSection update
+        },
+
+        activate: function () {
+            this.search_active = true;
+        },
+        deactivate: function () {
+            this.search_active = false;
+        },
+
+        updateSearch(e) {
+            const query = e.target.value.toLowerCase();
+            this.items_qs = this.items.filter(i => i.toLowerCase().includes(query));
+        },
+
+        addItem(item) {
+            if (!this.filteredItems.includes(item)) {
+                this.filteredItems.push(item);
+            }
+            this.updateFilter();
+        },
+
+        removeItem(item) {
+            this.filteredItems = this.filteredItems.filter(i => i !== item);
+            this.updateFilter();
+        },
 
         processData: function (rawData) {
             rawData = this.cleanData(rawData);
             rawData = this.separateBranch(rawData);
             this.formatForSales(rawData);
+            this.rawDataBody = rawData;
             this.formatProducts(rawData, 10);
             this.dataLoaded = true;
+            this.items_qs = this.items;
         }, // processData
 
         cleanData: function (rawData) {
@@ -139,10 +302,11 @@ export default {
         }, //formatForSales
 
         formatProducts: function (rawData, range) {
-            let filteredItems = ["big mary", "tenders", "combo", "pc", "wrap", "sandwich", "taters", "poutine", "wing"];
+            let filteredItems = this.filteredItems;
             const itemWiseSale = {}
             const itemWiseQty = {}
             const itemWiseList = {}
+            let items = [];
             Object.keys(rawData).forEach(branch => {
                 itemWiseQty[branch] = {};
                 itemWiseSale[branch] = {};
@@ -161,6 +325,9 @@ export default {
                         itemWiseList[branch][itemName][0] = (itemWiseList[branch][itemName][0] || 0) + itemQty;
                         itemWiseList[branch][itemName][1] = (itemWiseList[branch][itemName][1] || 0) + itemSale;
                     }
+                    if (!items.includes(itemName)) {
+                        items.push(itemName);
+                    }
                 });
                 itemWiseQty[branch] = this.sortObject(itemWiseQty[branch]);
                 itemWiseQty[branch]["tail"] = itemWiseQty[branch].slice(0, range).reverse();
@@ -169,7 +336,8 @@ export default {
                 itemWiseSale[branch]["tail"] = itemWiseSale[branch].slice(0, range).reverse();
                 itemWiseSale[branch]["head"] = itemWiseSale[branch].slice(-range).reverse();
             });
-            this.itemWiseList = itemWiseList;
+            this.items = items;
+            this.itemWiseList = JSON.parse(JSON.stringify(itemWiseList));
         }, // formatProducts
 
         sortObject: function (object) {

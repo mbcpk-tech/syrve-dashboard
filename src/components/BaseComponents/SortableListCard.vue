@@ -38,7 +38,7 @@
 .table {
     border-spacing: 1;
     border-collapse: collapse;
-    background-color: rgba(0, 110, 255, 0.041);
+    background-color: rgba(244, 244, 255, 0.41);
     backdrop-filter: blur(25px);
     box-shadow: 4px 4px 30px rgba(0, 0, 0, .2);
     border-radius: 18px;

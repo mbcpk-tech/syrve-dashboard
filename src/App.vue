@@ -1,9 +1,7 @@
 <template>
-    <img src="./assets/logo.svg" alt="logo" class="logo">
-    <div class="wrapper">
+    <div id="app">
         <ParentComponent />
     </div>
-
 </template>
 
 <style>
@@ -20,16 +18,24 @@ body {
     background-position: center;
     background-attachment: fixed;
     background-size: 35%;
-    min-height: 95vh;
-    max-width: 100% !important;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: "Inter", sans-serif;
+    color: var(--text);
+    overflow-x: hidden;
 }
 
-.logo {
+body::before {
+    content: "";
     position: fixed;
-    top: 5px;
-    left: 5px;
-    width: 150px;
-    z-index: 1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: -1;
 }
 
 .card {
@@ -54,22 +60,6 @@ body {
 .card:hover {
     border: 1px solid black;
     transform: scale(1.05);
-}
-
-/* .card:active {
-    transform: scale(0.95) rotateZ(1.7deg);
-} */
-</style>
-
-<style scoped>
-.wrapper {
-    max-width: 100% !important;
-    min-height: 95vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(15px);
 }
 </style>
 
