@@ -16,15 +16,20 @@
             </div>
         </div>
 
+        <div v-if="isLoading" class="line-loader"></div>
         <div class="application" v-if="dataLoaded">
-            <SalesCharts :salesData="monthlyBranchTotals" :hourlySalesData="hourlyBranchTotals" />
+            <SalesCharts :salesData="monthlyBranchTotals" :hourlySalesData="hourlyBranchTotals"
+                :paymentWise="paymentWise" :dayWise="dailyBranchTotals" />
             <ItemWiseSection :key="itemKey" :itemWiseList="itemWiseList" />
             <div class="dum"></div>
         </div>
 
         <div v-else class="wrapper">
-            <UploadFileCard @fileUploaded="processData" />
+            <UploadFileCard @fileUploaded="processData" @throwError="handleSnackBar" />
         </div>
+
+        <SnackBar class="snackBar" :isVisible="snackBarVisible">{{ snackBarMsg }}</SnackBar>
+
     </div>
 </template>
 
@@ -91,6 +96,11 @@ body {
     border-radius: 12px;
     padding: 4px;
     font-size: 8px;
+    cursor: pointer;
+}
+
+.filter-div .chips span:hover {
+    background-color: #f44336;
 }
 
 .search-modal {
@@ -148,6 +158,34 @@ body {
     overflow-x: hidden;
     z-index: 1;
 }
+
+.line-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, #007bff, #00d4ff);
+    z-index: 99999;
+    animation: loading-line 2s ease-in-out infinite;
+}
+
+@keyframes loading-line {
+    0% {
+        width: 0%;
+        left: 0%;
+    }
+
+    50% {
+        width: 60%;
+        left: 20%;
+    }
+
+    100% {
+        width: 100%;
+        left: 100%;
+    }
+}
 </style>
 
 <script>
@@ -155,6 +193,7 @@ import UploadFileCard from './components/UploadFileCard.vue';
 import SalesCharts from './components/SalesCharts.vue';
 import ItemWiseSection from './components/ItemWiseSection.vue';
 import AdditionalComponents from './components/additional/AdditionalComponents.vue';
+import SnackBar from './components/BaseComponents/SnackBar.vue';
 
 export default {
     name: "ParentComponent",
@@ -162,28 +201,35 @@ export default {
         UploadFileCard,
         SalesCharts,
         ItemWiseSection,
-        AdditionalComponents
+        AdditionalComponents,
+        SnackBar
     },
     data() {
         return {
             dataLoaded: false,
+            isLoading: false,
             rawDataHeaders: [],
             rawDataBody: [],
             monthlyBranchTotals: {},
             hourlyBranchTotals: {},
+            dailyBranchTotals: {},
+            paymentWise: {},
             itemWiseList: {},
             filteredItems: [],
             itemKey: 0,
             items: [],
             items_qs: [],
-            search_active: false
+            search_active: false,
+            snackBarVisible: false,
+            snackBarMsg: ""
         }
     },
     methods: {
 
         updateFilter() {
             this.formatProducts(this.rawDataBody, 10);
-            this.itemKey = Date.now(); // forces ItemWiseSection update
+            this.itemKey = Date.now();
+            this.items_qs = this.items;
         },
 
         activate: function () {
@@ -195,7 +241,8 @@ export default {
 
         updateSearch(e) {
             const query = e.target.value.toLowerCase();
-            this.items_qs = this.items.filter(i => i.toLowerCase().includes(query));
+            this.items_qs = this.items.filter(i => i.toLowerCase().includes(query)).filter(i => !this.filteredItems.includes(i));
+
         },
 
         addItem(item) {
@@ -203,103 +250,53 @@ export default {
                 this.filteredItems.push(item);
             }
             this.updateFilter();
+            this.items_qs = this.items_qs.filter(i => i !== item);
         },
 
         removeItem(item) {
             this.filteredItems = this.filteredItems.filter(i => i !== item);
             this.updateFilter();
+            this.items_qs.push(item);
+            this.items_qs.sort();
         },
 
-        processData: function (rawData) {
-            rawData = this.cleanData(rawData);
-            rawData = this.separateBranch(rawData);
-            this.formatForSales(rawData);
-            this.rawDataBody = rawData;
-            this.formatProducts(rawData, 10);
-            this.dataLoaded = true;
-            this.items_qs = this.items;
+        handleSnackBar: function (msg) {
+            this.snackBarVisible = true;
+            this.snackBarMsg = msg;
+            setTimeout(() => {
+                this.snackBarVisible = false;
+            }, 3000);
+        },
+
+        async processData(rawData) {
+            this.isLoading = true;
+            this.dataLoaded = false;
+            await this.$nextTick();
+            await new Promise(r => setTimeout(r, 50));
+            const worker = new Worker(new URL('@/workers/dataWorker.js', import.meta.url), { type: 'module' });
+            worker.postMessage({ rawData });
+            worker.onmessage = (e) => {
+                const processedData = e.data;
+
+                this.monthlyBranchTotals = processedData.monthlyBranchTotals;
+                this.hourlyBranchTotals = processedData.hourlyBranchTotals;
+                this.dailyBranchTotals = processedData.dailyBranchTotals;
+                this.paymentWise = processedData.payments;
+
+                this.rawDataBody = processedData.rawData;
+                this.formatProducts(this.rawDataBody, 10);
+
+                this.items_qs = this.items;
+
+                this.isLoading = false;
+                this.dataLoaded = true;
+                worker.terminate();
+            };
+            worker.onerror = (err) => {
+                console.error("Worker error:", err);
+                this.isLoading = false;
+            };
         }, // processData
-
-        cleanData: function (rawData) {
-            let currentData = "";
-            for (let i = 0; i < 5; i++) {
-                rawData.forEach((ele, eidx) => {
-                    ele[i].length > 1 ? currentData = ele[i] : rawData[eidx][i] = currentData;
-                })
-            }
-            rawData.forEach((ele, eidx) => {
-                ele.forEach((val, idx) => {
-                    if (!isNaN(val) && val !== "") {
-                        ele[idx] = Number(val);
-                    }
-                });
-            })
-            rawData = rawData.filter(row => {
-                const saleValue = Number(row[8]) || 0;
-                return saleValue > 0;
-            });
-            return rawData;
-        }, // cleanData
-
-        separateBranch: function (rawData) {
-            rawData.forEach((ele, eidx) => {
-                if (ele[4].includes("FoodPanda")) {
-                    rawData[eidx][3] = "FoodPanda";
-                    if (ele[4].includes("Cash")) { rawData[eidx][4] = "CASH" }
-                    if (ele[4].includes("Online")) { rawData[eidx][4] = "ONLINE" }
-                }
-            })
-
-            let groupedByBranch = rawData.reduce((acc, row) => {
-                const branch = row[3];
-                (acc[branch] ||= []).push(row);
-                return acc;
-            }, {});
-
-            return groupedByBranch;
-        }, //separateBranch
-
-        formatForSales: function (rawData) {
-            const monthlyBranchTotals = {};
-            const hourlyBranchTotals = {};
-
-            Object.keys(rawData).forEach(branch => {
-                monthlyBranchTotals[branch] = {};
-                hourlyBranchTotals[branch] = {};
-                rawData[branch].forEach((saleItem) => {
-                    if (!saleItem || !saleItem[0]) return;
-                    const dateStr = saleItem[0].trim();
-                    const hourStr = saleItem[1];
-                    const saleValue = Number(saleItem[8]) || 0;
-                    let dateObj;
-                    if (dateStr.includes('-')) {
-                        dateObj = new Date(dateStr);
-                    } else if (dateStr.includes('/')) {
-                        const [month, day, year] = dateStr.split('/');
-                        dateObj = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-                    } else {
-                        dateObj = new Date(dateStr);
-                    }
-                    if (isNaN(dateObj.getTime())) return;
-                    const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-                    monthlyBranchTotals[branch][monthKey] = (monthlyBranchTotals[branch][monthKey] || 0) + saleValue;
-                    const hourKey = `${String(hourStr).padStart(2, '0')}:00`;
-                    hourlyBranchTotals[branch][hourKey] = (hourlyBranchTotals[branch][hourKey] || 0) + saleValue;
-                });
-            });
-
-            // Fill 0 for non-existent hours
-            Object.keys(this.hourlyBranchTotals).forEach(branch => {
-                const fullHours = {};
-                for (let h = 0; h < 24; h++) {
-                    const hourKey = `${String(h).padStart(2, '0')}:00`;
-                    fullHours[hourKey] = this.hourlyBranchTotals[branch][hourKey] || 0;
-                }
-                this.hourlyBranchTotals[branch] = fullHours;
-            });
-            this.monthlyBranchTotals = monthlyBranchTotals;
-            this.hourlyBranchTotals = hourlyBranchTotals;
-        }, //formatForSales
 
         formatProducts: function (rawData, range) {
             let filteredItems = this.filteredItems;
@@ -337,6 +334,7 @@ export default {
                 itemWiseSale[branch]["head"] = itemWiseSale[branch].slice(-range).reverse();
             });
             this.items = items;
+            this.items_qs = items;
             this.itemWiseList = JSON.parse(JSON.stringify(itemWiseList));
         }, // formatProducts
 

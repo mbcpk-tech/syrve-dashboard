@@ -115,22 +115,65 @@ export default {
     name: "UploadFileCard",
     methods: {
         handleFile: function (event) {
+
+            const EXPECTED_HEADERS = [
+                "date",
+                "hour",
+                "item",
+                "branch",
+                "payment",
+                "quantity",
+                "customers",
+                "asp",
+                "sale"
+            ];
+
             let dataFile = event.target.files[0];
-            if (dataFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    let text = e.target.result;
-                    text = text.split("\n");
-                    text.forEach((line, lidx) => {
-                        text[lidx] = line.replace("\r", "").split(",");
-                    })
-                    // day,hour,item,branch,payment,quantity,customers,asp,sale
-                    let rawDataHeaders = text[0];
-                    let rawDataBody = text.slice(1);
+            if (!dataFile) return
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    let text = e.target.result.trim();
+                    const lines = text.split(/\r?\n/);
+                    if (lines.length < 2) {
+                        this.$emit("throwError", "File is empty or has no data rows.");
+                        return;
+                    }
+                    const headers = lines[0].replace(/\r/g, "").split(",").map(h => h.trim().toLowerCase());
+                    if (headers.length !== EXPECTED_HEADERS.length) {
+                        this.$emit("throwError", `Invalid column count. Expected ${EXPECTED_HEADERS.length}, found ${headers.length}.`);
+                        return;
+                    }
+                    for (let i = 0; i < EXPECTED_HEADERS.length; i++) {
+                        if (headers[i] !== EXPECTED_HEADERS[i]) {
+                            this.$emit("throwError", `Invalid header at position ${i + 1}. Expected "${EXPECTED_HEADERS[i]}", found "${headers[i]}".`);
+                            return;
+                        }
+                    }
+                    const rawDataBody = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+
+                        const cols = line.split(",");
+                        if (cols.length !== EXPECTED_HEADERS.length) {
+                            this.$emit(
+                                "throwError",
+                                `Malformed data on line ${i + 1}: expected ${EXPECTED_HEADERS.length} columns, found ${cols.length}.`
+                            );
+                            return;
+                        }
+
+                        rawDataBody.push(cols);
+                    }
                     this.$emit("fileUploaded", rawDataBody);
+                } catch (err) {
+                    this.$emit("throwError", "Failed to parse file: " + err.message);
                 }
-                reader.readAsText(dataFile);
-            }
+            };
+
+            reader.readAsText(dataFile);
         },
     }
 }

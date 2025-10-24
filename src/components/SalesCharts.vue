@@ -6,6 +6,10 @@
         </div>
         <div class="charts">
             <LineChart v-if="dataLoaded" class="card chart line" :chartData="hourlyChartData" />
+            <DonutChart class="card chart pie" :chartData="paymentWiseData" />
+        </div>
+        <div class="charts">
+            <BarChart v-if="dataLoaded" class="card chart bar" :chartData="dayWiseChartData" />
         </div>
     </div>
 </template>
@@ -36,25 +40,29 @@
 import BarChart from './BaseComponents/BarChart.vue';
 import PieChart from './BaseComponents/PieChart.vue';
 import LineChart from './BaseComponents/LineChart.vue';
+import DonutChart from './BaseComponents/DonutChart.vue';
 
 export default {
     name: "SalesCharts",
     components: {
         BarChart,
         PieChart,
-        LineChart
+        LineChart,
+        DonutChart
     },
     props: {
         salesData: Object,
         hourlySalesData: Object,
+        paymentWise: Object,
+        dayWise: Object
     },
     data() {
         return {
             dataLoaded: false,
             pieChartData: {
                 data: {
-                    labels: ['January', 'February', 'March'],
-                    datasets: [{ data: [40, 20, 12] }]
+                    labels: [],
+                    datasets: [{ data: [] }]
                 },
                 options: {
                     responsive: true
@@ -72,6 +80,16 @@ export default {
                 }
             },
             hourlyChartData: {
+                data: { labels: [], datasets: [] }, options: {
+                    responsive: true
+                }
+            },
+            dayWiseChartData: {
+                data: { labels: [], datasets: [] }, options: {
+                    responsive: true
+                }
+            },
+            paymentWiseData: {
                 data: { labels: [], datasets: [] }, options: {
                     responsive: true
                 }
@@ -93,7 +111,6 @@ export default {
                     const value = this.salesData[key][month] ?? 0;
                     data.push(value);
                 });
-
                 this.barChartData.data.datasets.push({
                     label: key,
                     data: data
@@ -135,7 +152,6 @@ export default {
                 }
             }
 
-
             this.hourlyChartData = {
                 data: { labels: [], datasets: [] }
             };
@@ -164,6 +180,49 @@ export default {
                 let color = this.$colors[i % this.$colors.length]
                 dataset.backgroundColor = color;
                 dataset.borderColor = color;
+            });
+
+            const paymentLabels = [];
+            const paymentData = [];
+            const paymentColors = [];
+            Object.keys(this.paymentWise).forEach((payment, i) => {
+                paymentLabels.push(payment);
+                paymentData.push(this.paymentWise[payment]);
+                paymentColors.push(this.$colors[i % this.$colors.length]);
+            });
+
+            this.paymentWiseData = {
+                data: {
+                    labels: paymentLabels,
+                    datasets: [
+                        {
+                            data: paymentData,
+                            backgroundColor: paymentColors
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Payment Wise Sales' }
+                    }
+                }
+            }
+
+            // DayWise
+            const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            this.dayWiseChartData.data.labels = daysOrder;
+            Object.keys(this.dayWise).forEach((branch, i) => {
+                const branchData = daysOrder.map(day => this.dayWise[branch][day] || 0);
+                const color = this.$colors[i % this.$colors.length];
+                this.dayWiseChartData.data.datasets.push({
+                    label: branch,
+                    data: branchData,
+                    borderWidth: 1,
+                    borderColor: color,
+                    backgroundColor: color,
+                });
             });
 
             this.dataLoaded = true;
