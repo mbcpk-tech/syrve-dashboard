@@ -1,6 +1,15 @@
 <template>
     <div id="app">
         <ParentComponent />
+
+        <div class="footer">
+            <span>Copyright (c). All Rights Reserved - 2025.</span>
+
+            <span>
+                Made by <a href="https://dev-ars.vercel.app/">ARS</a>
+            </span>
+        </div>
+
     </div>
 </template>
 
@@ -60,6 +69,21 @@ body::before {
 .card:hover {
     border: 1px solid black;
     transform: scale(1.05);
+}
+</style>
+
+<style scoped>
+.footer {
+    position: fixed;
+    bottom: 3px;
+    left: 0px;
+    font-size: 10px;
+    text-align: center;
+    width: 100%;
+    padding: 0 8px;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
 }
 </style>
 

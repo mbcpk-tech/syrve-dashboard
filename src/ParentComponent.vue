@@ -6,21 +6,28 @@
                 <div class="chips">
                     <span class="chip" v-for="item in filteredItems" @click="removeItem(item)">{{ item }}</span>
                 </div>
-                <input type="text" @input="updateSearch($event)" @focus="activate" @blur="deactivate" />
+                <input type="text" @keyup="updateSearch($event)" @focus="activate" @blur="deactivate"
+                    class="search-bar" />
                 <button @click="updateFilter">Filter</button>
-            </div>
-            <div class="search-modal" v-if="search_active" @mousedown.prevent>
-                <span v-for="(item, i) in items_qs" @click="addItem(item)">
-                    {{ item }}
-                </span>
             </div>
         </div>
 
+        <div class="search-modal" v-if="search_active" @mousedown.prevent>
+            <span v-for="(item, i) in items_qs" @click="addItem(item)">
+                {{ item }}
+            </span>
+        </div>
+
         <div v-if="isLoading" class="line-loader"></div>
+
         <div class="application" v-if="dataLoaded">
+            <h1 class="period">Period: {{ period }}</h1>
             <SalesCharts :salesData="monthlyBranchTotals" :hourlySalesData="hourlyBranchTotals"
                 :paymentWise="paymentWise" :dayWise="dailyBranchTotals" />
             <ItemWiseSection :key="itemKey" :itemWiseList="itemWiseList" />
+            <br>
+            <AiAnalysis :monthlyBranchTotals="monthlyBranchTotals" :hourlyBranchTotals="hourlyBranchTotals"
+                :paymentWise="paymentWise" :dailyBranchTotals="dailyBranchTotals" :itemWiseList="itemWiseList" />
             <div class="dum"></div>
         </div>
 
@@ -29,7 +36,6 @@
         </div>
 
         <SnackBar class="snackBar" :isVisible="snackBarVisible">{{ snackBarMsg }}</SnackBar>
-
     </div>
 </template>
 
@@ -46,11 +52,11 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 9999;
+    z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: rgba(24, 24, 24, 0.1);
+    background-color: rgba(255, 255, 255, 0.7);
     padding: 10px 20px;
     backdrop-filter: blur(20px);
     box-sizing: border-box;
@@ -72,6 +78,7 @@ body {
     padding: 8px;
     outline: none;
     width: 250px;
+    background-color: rgba(244, 244, 244, 0.5);
 }
 
 .filter-div button {
@@ -88,7 +95,7 @@ body {
     justify-content: flex-start;
     flex-wrap: wrap;
     gap: 2px;
-    max-width: 400px;
+    max-width: 900px;
 }
 
 .filter-div .chips span {
@@ -104,14 +111,18 @@ body {
 }
 
 .search-modal {
-    width: 300px;
-    background-color: #fff;
+    width: 251px;
+    background-color: rgba(244, 244, 244, 0.5);
+    z-index: 12;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     padding: 12px;
     color: #000;
     position: fixed;
-    top: 100%;
-    right: 3%;
+    top: 6.5%;
+    right: 6.2%;
     border: 1px solid #c3c3c3;
+    border-top: none;
     overflow-y: scroll;
     font-size: 10px;
     max-height: 400px;
@@ -132,8 +143,14 @@ body {
     padding-top: 80px;
 }
 
+.period {
+    text-align: center;
+    margin: 8px 0px;
+    font-weight: bolder;
+}
+
 .dum {
-    height: 100vh;
+    height: 40vh;
 }
 
 @media (max-width: 768px) {
@@ -193,6 +210,7 @@ import UploadFileCard from './components/UploadFileCard.vue';
 import SalesCharts from './components/SalesCharts.vue';
 import ItemWiseSection from './components/ItemWiseSection.vue';
 import AdditionalComponents from './components/additional/AdditionalComponents.vue';
+import AiAnalysis from './components/AiAnalysis.vue';
 import SnackBar from './components/BaseComponents/SnackBar.vue';
 
 export default {
@@ -202,6 +220,7 @@ export default {
         SalesCharts,
         ItemWiseSection,
         AdditionalComponents,
+        AiAnalysis,
         SnackBar
     },
     data() {
@@ -215,13 +234,14 @@ export default {
             dailyBranchTotals: {},
             paymentWise: {},
             itemWiseList: {},
-            filteredItems: [],
+            filteredItems: ["pc", "combo", "meal"],
             itemKey: 0,
             items: [],
             items_qs: [],
             search_active: false,
             snackBarVisible: false,
-            snackBarMsg: ""
+            snackBarMsg: "",
+            period: ""
         }
     },
     methods: {
@@ -234,6 +254,18 @@ export default {
 
         activate: function () {
             this.search_active = true;
+            this.$nextTick(() => {
+                const searchInput = document.querySelector('.filter-div .search-bar');
+                const modal = document.querySelector('.search-modal');
+
+                if (searchInput && modal) {
+                    const inputRect = searchInput.getBoundingClientRect();
+                    modal.style.width = inputRect.width + 'px';
+                    modal.style.top = inputRect.bottom + 'px';
+                    modal.style.left = inputRect.left + 'px';
+                    modal.style.right = 'auto';
+                }
+            });
         },
         deactivate: function () {
             this.search_active = false;
@@ -242,7 +274,10 @@ export default {
         updateSearch(e) {
             const query = e.target.value.toLowerCase();
             this.items_qs = this.items.filter(i => i.toLowerCase().includes(query)).filter(i => !this.filteredItems.includes(i));
-
+            if (e.keyCode == 13) {
+                this.addItem(query);
+                e.target.value = "";
+            }
         },
 
         addItem(item) {
@@ -268,6 +303,31 @@ export default {
             }, 3000);
         },
 
+        calculateDatePeriod: function (rawData) {
+            let allDates = [];
+            Object.keys(rawData).forEach(branch => {
+                rawData[branch].forEach((saleItem) => {
+                    if (saleItem && saleItem[0]) {
+                        allDates.push(new Date(saleItem[0]));
+                    }
+                });
+            });
+
+            if (allDates.length === 0) {
+                this.period = 'No data available';
+                return;
+            }
+            const minDate = new Date(Math.min(...allDates));
+            const maxDate = new Date(Math.max(...allDates));
+            const formatDate = (date) => {
+                const d = date.getDate().toString().padStart(2, '0');
+                const m = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
+                const y = date.getFullYear();
+                return `${d}/${m}/${y}`;
+            };
+            this.period = `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+        },
+
         async processData(rawData) {
             this.isLoading = true;
             this.dataLoaded = false;
@@ -285,7 +345,7 @@ export default {
 
                 this.rawDataBody = processedData.rawData;
                 this.formatProducts(this.rawDataBody, 10);
-
+                this.calculateDatePeriod(this.rawDataBody);
                 this.items_qs = this.items;
 
                 this.isLoading = false;
@@ -355,7 +415,6 @@ export default {
             }
             return arrayToSort;
         }, // sortObject
-
     }
 }
 

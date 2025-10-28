@@ -36,6 +36,8 @@
             </svg>
         </label>
         <input type="file" id="file" @change="handleFile">
+        <p>OR</p>
+        <button class="btn" @click="preload">Use Preloaded Data</button>
     </div>
 </template>
 
@@ -107,6 +109,17 @@
 #file {
     display: none;
 }
+
+.btn {
+    text-align: center;
+    background-color: rgba(0, 110, 255, 0.75);
+    width: 100%;
+    height: 40px;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #fff;
+}
 </style>
 
 <script>
@@ -115,7 +128,37 @@ export default {
     name: "UploadFileCard",
     methods: {
         handleFile: function (event) {
+            let dataFile = event.target.files[0];
+            if (!dataFile) return
 
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    let rawDataBody = this.processData(e.target.result);
+                    this.$emit("fileUploaded", rawDataBody);
+                } catch (err) {
+                    this.$emit("throwError", "Failed to parse file: " + err.message);
+                }
+            };
+            reader.readAsText(dataFile);
+        },
+
+        preload: async function () {
+            let urlData = "https://raw.githubusercontent.com/mbcpk-tech/syrve-dashboard/refs/heads/main/dashboard.csv"
+            try {
+                const response = await fetch(urlData);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const stringData = await response.text();
+                let rawDataBody = this.processData(stringData);
+                this.$emit("fileUploaded", rawDataBody);
+            } catch (error) {
+                console.error("Error preloading data:", error);
+            }
+        },
+
+        processData: function (stringData) {
             const EXPECTED_HEADERS = [
                 "date",
                 "hour",
@@ -127,54 +170,41 @@ export default {
                 "asp",
                 "sale"
             ];
-
-            let dataFile = event.target.files[0];
-            if (!dataFile) return
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    let text = e.target.result.trim();
-                    const lines = text.split(/\r?\n/);
-                    if (lines.length < 2) {
-                        this.$emit("throwError", "File is empty or has no data rows.");
-                        return;
-                    }
-                    const headers = lines[0].replace(/\r/g, "").split(",").map(h => h.trim().toLowerCase());
-                    if (headers.length !== EXPECTED_HEADERS.length) {
-                        this.$emit("throwError", `Invalid column count. Expected ${EXPECTED_HEADERS.length}, found ${headers.length}.`);
-                        return;
-                    }
-                    for (let i = 0; i < EXPECTED_HEADERS.length; i++) {
-                        if (headers[i] !== EXPECTED_HEADERS[i]) {
-                            this.$emit("throwError", `Invalid header at position ${i + 1}. Expected "${EXPECTED_HEADERS[i]}", found "${headers[i]}".`);
-                            return;
-                        }
-                    }
-                    const rawDataBody = [];
-                    for (let i = 1; i < lines.length; i++) {
-                        const line = lines[i].trim();
-                        if (!line) continue;
-
-                        const cols = line.split(",");
-                        if (cols.length !== EXPECTED_HEADERS.length) {
-                            this.$emit(
-                                "throwError",
-                                `Malformed data on line ${i + 1}: expected ${EXPECTED_HEADERS.length} columns, found ${cols.length}.`
-                            );
-                            return;
-                        }
-
-                        rawDataBody.push(cols);
-                    }
-                    this.$emit("fileUploaded", rawDataBody);
-                } catch (err) {
-                    this.$emit("throwError", "Failed to parse file: " + err.message);
+            let text = stringData.trim();
+            const lines = text.split(/\r?\n/);
+            if (lines.length < 2) {
+                this.$emit("throwError", "File is empty or has no data rows.");
+                return;
+            }
+            const headers = lines[0].replace(/\r/g, "").split(",").map(h => h.trim().toLowerCase());
+            if (headers.length !== EXPECTED_HEADERS.length) {
+                this.$emit("throwError", `Invalid column count. Expected ${EXPECTED_HEADERS.length}, found ${headers.length}.`);
+                return;
+            }
+            for (let i = 0; i < EXPECTED_HEADERS.length; i++) {
+                if (headers[i] !== EXPECTED_HEADERS[i]) {
+                    this.$emit("throwError", `Invalid header at position ${i + 1}. Expected "${EXPECTED_HEADERS[i]}", found "${headers[i]}".`);
+                    return;
                 }
-            };
+            }
+            const rawDataBody = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
 
-            reader.readAsText(dataFile);
-        },
+                const cols = line.split(",");
+                if (cols.length !== EXPECTED_HEADERS.length) {
+                    this.$emit(
+                        "throwError",
+                        `Malformed data on line ${i + 1}: expected ${EXPECTED_HEADERS.length} columns, found ${cols.length}.`
+                    );
+                    return;
+                }
+
+                rawDataBody.push(cols);
+            }
+            return rawDataBody;
+        }
     }
 }
 
