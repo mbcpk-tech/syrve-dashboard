@@ -6,8 +6,8 @@
                 <div class="chips">
                     <span class="chip" v-for="item in filteredItems" @click="removeItem(item)">{{ item }}</span>
                 </div>
-                <input type="text" @keyup="updateSearch($event)" @focus="activate" @blur="deactivate"
-                    class="search-bar" />
+                <input type="text" @keyup="updateSearch($event)" @focus="activate" @blur="deactivate" class="search-bar"
+                    placeholder="Start Searching here" />
                 <button @click="updateFilter">Filter</button>
             </div>
         </div>
@@ -145,6 +145,7 @@ body {
     position: relative;
     z-index: 1;
     padding-top: 80px;
+    width: 100%;
 }
 
 .period {
@@ -157,6 +158,22 @@ body {
     height: 40vh;
 }
 
+.wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    padding-top: 80px;
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(15px);
+    z-index: 1;
+    overflow: auto;
+}
+
 @media (max-width: 768px) {
     .filter-div input {
         width: 150px;
@@ -164,6 +181,54 @@ body {
 
     .logo {
         height: 30px;
+    }
+}
+
+@media (max-width: 400px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 10px;
+        height: auto;
+    }
+
+    .navbar .filter-div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .filter-div input,
+    .filter-div .chips {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 4px 0;
+    }
+
+    .application {
+        margin-top: 15vh;
+    }
+
+    .navbar .filter-div>button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .wrapper {
+        position: absolute;
+        height: auto;
+        padding: 80px 10px;
+    }
+
+    .logo {
+        height: 30px;
+        margin-bottom: 5px;
+    }
+
+    .search-modal {
+        top: auto;
+        right: auto;
     }
 }
 </style>

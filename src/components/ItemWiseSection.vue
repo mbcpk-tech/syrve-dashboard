@@ -14,14 +14,33 @@
 <style scoped>
 .mf-wrapper {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    align-items: center;
+    gap: 20px;
+    padding: 10px;
 }
 
 .left-w,
 .right-w {
-    width: 49% !important;
-    min-width: 700px !important;
+    flex: 1 1 45%;
+    max-width: 700px;
+    min-width: 350px;
+}
+
+@media (max-width: 768px) {
+    .mf-wrapper {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .left-w,
+    .right-w {
+        flex: 1 1 95%;
+        width: 95% !important;
+        min-width: 300px !important;
+        margin-bottom: 20px;
+    }
 }
 </style>
 

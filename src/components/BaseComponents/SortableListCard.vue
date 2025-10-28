@@ -45,6 +45,7 @@
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     transition: 0.5s all;
     min-width: 95% !important;
+    max-width: 100% !important;
 
     td,
     th {

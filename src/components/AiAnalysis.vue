@@ -126,6 +126,12 @@
         transform: rotate(45deg) rotateX(-385deg) rotateY(385deg);
     }
 }
+
+@media (max-width:400px) {
+    .section .card {
+        width: 95%;
+    }
+}
 </style>
 <script>
 

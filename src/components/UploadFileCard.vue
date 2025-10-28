@@ -42,6 +42,13 @@
 </template>
 
 <style scoped>
+template {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .container {
     height: 300px;
     width: 300px;

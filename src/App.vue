@@ -32,7 +32,7 @@ body {
     padding: 0;
     font-family: "Inter", sans-serif;
     color: var(--text);
-    overflow-x: hidden;
+    overflow-x: hidden !important;
 }
 
 body::before {

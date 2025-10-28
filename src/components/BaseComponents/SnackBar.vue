@@ -36,6 +36,12 @@
     bottom: 5vh;
     transition: 0.5s ease-in-out;
 }
+
+@media (max-width: 400px) {
+    .bar {
+        bottom: -100vh;
+    }
+}
 </style>
 
 <script>

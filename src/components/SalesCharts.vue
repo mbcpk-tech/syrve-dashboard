@@ -34,6 +34,24 @@
 .chart {
     margin: 20px 20px;
 }
+
+@media (max-width: 400px) {
+    .charts {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+
+    .pie,
+    .bar,
+    .line {
+        width: 100%;
+        min-width: 90% !important;
+        max-width: 90%;
+        max-height: 100%;
+    }
+}
 </style>
 
 <script>
