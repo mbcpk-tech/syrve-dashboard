@@ -78,7 +78,7 @@ export default {
                 );
                 let sortedArray = this.sortArray(branchArray, this.currentOrder);
                 this.head[branch] = sortedArray.slice(-range).reverse();
-                this.tail[branch] = sortedArray.slice(0, range).reverse();
+                this.tail[branch] = sortedArray.slice(0, range);
             });
         }, // init
 

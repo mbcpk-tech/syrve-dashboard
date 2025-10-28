@@ -50,7 +50,7 @@ template {
 }
 
 .container {
-    height: 300px;
+    max-height: 300px;
     width: 300px;
     border-radius: 10px;
     box-shadow: 4px 4px 30px rgba(0, 0, 0, .2);
