@@ -32,6 +32,11 @@
     margin-left: -2%;
     min-height: 300px;
     background-color: rgba(255, 255, 255, 0.8);
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    cursor: auto;
 }
 
 .btn {
@@ -155,9 +160,6 @@ export default {
             const geminiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
             if (this.$geminiApi.length < 1) {
                 return;
-            }
-            if (this.$geminiApi.length > 1) {
-                console.log(this.$geminiApi);
             }
             const response = await fetch(geminiURL, {
                 method: "POST",
