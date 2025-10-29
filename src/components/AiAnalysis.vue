@@ -134,7 +134,6 @@
 }
 </style>
 <script>
-
 export default {
     name: "AiAnalysis",
     data() {
@@ -167,6 +166,13 @@ export default {
             if (this.$geminiApi.length < 1) {
                 return;
             }
+
+            setTimeout(() => {
+                if (this.isLoading) {
+                    this.showSnackbar();
+                }
+            }, 5000);
+
             const response = await fetch(geminiURL, {
                 method: "POST",
                 headers: {
@@ -185,7 +191,10 @@ such as * for bold, use b html tag, and use PKR for currency. Use 10px light wei
 and in Last use this.$colors array that has list of colors and separate each section with that background colors`
                             }]
                         }
-                    ]
+                    ],
+                    // "generationConfig": {
+                    //     "maxOutputTokens": 2400
+                    // } // This causes a bug, that makes gemini stops before completing response
                 })
             });
             let reply = await response.json()
@@ -193,7 +202,11 @@ and in Last use this.$colors array that has list of colors and separate each sec
             this.isLoading = false;
             this.isLoaded = true;
             this.response = reply;
-        } // Analyze Data
+        }, // Analyze Data
+
+        showSnackbar: function () {
+            this.$emit('showSnackbar', "It's taking time, Hold on");
+        }
 
     }
 }

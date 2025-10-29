@@ -26,20 +26,29 @@
     text-align: center;
     font-size: 12px;
     min-width: 20%;
-    bottom: -10%;
+
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+
+    bottom: -100px;
     border-radius: 8px;
-    position: absolute;
     transition: 0.5s ease-in-out;
 }
 
 .bar.visible {
-    bottom: 5vh;
+    bottom: 30px;
     transition: 0.5s ease-in-out;
 }
 
 @media (max-width: 400px) {
     .bar {
-        bottom: -100vh;
+        min-width: 80%;
+    }
+
+    .bar.visible {
+        bottom: 10vh;
     }
 }
 </style>

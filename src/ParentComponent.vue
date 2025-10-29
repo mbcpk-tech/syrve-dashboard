@@ -23,19 +23,21 @@
         <div class="application" v-if="dataLoaded">
             <h1 class="period">Period: {{ period }}</h1>
             <SalesCharts :salesData="monthlyBranchTotals" :hourlySalesData="hourlyBranchTotals"
-                :paymentWise="paymentWise" :dayWise="dailyBranchTotals" />
-            <ItemWiseSection :key="itemKey" :itemWiseList="itemWiseList" />
+                :paymentWise="paymentWise" :dayWise="dailyBranchTotals" :selectedItem="selectedItem"
+                :selectedProductName="selectedProductName" />
+            <ItemWiseSection :key="itemKey" :itemWiseList="itemWiseList" @productAdded="handleProductClick" />
             <br>
             <AiAnalysis :monthlyBranchTotals="monthlyBranchTotals" :hourlyBranchTotals="hourlyBranchTotals"
-                :paymentWise="paymentWise" :dailyBranchTotals="dailyBranchTotals" :itemWiseList="itemWiseList" />
+                :paymentWise="paymentWise" :dailyBranchTotals="dailyBranchTotals" :itemWiseList="itemWiseList"
+                @showSnackbar="handleSnackBar" />
             <div class="dum"></div>
         </div>
 
         <div v-else class="wrapper">
-            <UploadFileCard @fileUploaded="processData" @throwError="handleSnackBar" />
+            <UploadFileCard v-if="!isLoading" @fileUploaded="processData" @throwError="handleSnackBar" />
         </div>
-
         <SnackBar class="snackBar" :isVisible="snackBarVisible">{{ snackBarMsg }}</SnackBar>
+
     </div>
 </template>
 
@@ -162,25 +164,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
-    top: 0;
-    left: 0;
     width: 100%;
-    height: 350px;
-    padding-top: 80px;
-    z-index: 1;
-    overflow: auto;
+    height: 100vh;
+    z-index: 100;
 }
 
-@media (max-width: 768px) {
-    .filter-div input {
-        width: 150px;
-    }
-
-    .logo {
-        height: 30px;
-    }
-}
 
 @media (max-width: 400px) {
     .navbar {
@@ -204,6 +192,10 @@ body {
         margin: 4px 0;
     }
 
+    .filter-div button {
+        display: none;
+    }
+
     .application {
         margin-top: 15vh;
     }
@@ -214,9 +206,9 @@ body {
     }
 
     .wrapper {
-        position: absolute;
         height: auto;
-        padding: 80px 10px;
+        width: 100%;
+        height: 100vh;
     }
 
     .logo {
@@ -232,17 +224,6 @@ body {
 </style>
 
 <style scoped>
-.wrapper {
-    position: absolute;
-    top: 25%;
-    left: 40%;
-    background-color: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(15px);
-    display: block;
-    overflow-x: hidden;
-    z-index: 1;
-}
-
 .line-loader {
     position: fixed;
     top: 0;
@@ -302,6 +283,8 @@ export default {
             paymentWise: {},
             itemWiseList: {},
             filteredItems: ["pc", "combo", "meal"],
+            selectedItem: {},
+            selectedProductName: null,
             itemKey: 0,
             items: [],
             items_qs: [],
@@ -482,6 +465,48 @@ export default {
             }
             return arrayToSort;
         }, // sortObject
+
+        handleProductClick: function (productName) {
+            this.selectedItem = {};
+            const monthsName = ["", "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthOrderMap = { "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "June": 6, "July": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12 };
+            const productDataByBranch = {};
+            for (const branchKey in this.rawDataBody) {
+                if (!this.rawDataBody.hasOwnProperty(branchKey)) continue;
+                const branchSales = this.rawDataBody[branchKey];
+                const monthlyAggregatesObject = {};
+                branchSales.forEach(line => {
+                    const item = line[2];
+                    if (item === productName) {
+                        const dateString = line[0];
+                        const qty = parseFloat(line[5] || 0);
+                        const sale = parseFloat(line[8] || 0);
+                        const monthNumber = parseInt(dateString.split('-')[0], 10);
+                        const monthName = monthsName[monthNumber];
+                        if (!monthlyAggregatesObject[monthName]) {
+                            monthlyAggregatesObject[monthName] = [0, 0];
+                        }
+                        monthlyAggregatesObject[monthName][0] += qty;
+                        monthlyAggregatesObject[monthName][1] += sale;
+                    }
+                });
+                const finalMonthlyArray = [];
+                for (const monthName in monthlyAggregatesObject) {
+                    const [qty, sale] = monthlyAggregatesObject[monthName];
+                    finalMonthlyArray.push([monthName, qty, sale]);
+                }
+                if (finalMonthlyArray.length > 0) {
+                    finalMonthlyArray.sort((a, b) => {
+                        const monthA = a[0];
+                        const monthB = b[0];
+                        return monthOrderMap[monthA] - monthOrderMap[monthB];
+                    });
+                    productDataByBranch[branchKey] = finalMonthlyArray;
+                }
+            }
+            this.selectedItem[productName] = productDataByBranch;
+            this.selectedProductName = productName;
+        } // handleProductClick
     }
 }
 

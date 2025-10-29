@@ -50,7 +50,7 @@ template {
 }
 
 .container {
-    max-height: 300px;
+    height: 350px;
     width: 300px;
     border-radius: 10px;
     box-shadow: 4px 4px 30px rgba(0, 0, 0, .2);
@@ -60,7 +60,7 @@ template {
     justify-content: space-between;
     padding: 10px;
     gap: 5px;
-    background-color: rgba(0, 110, 255, 0.041);
+    background-color: rgba(255, 255, 255, 0.41);
     backdrop-filter: blur(25px);
 }
 

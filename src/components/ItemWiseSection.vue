@@ -1,12 +1,12 @@
 <template>
     <div class="mf-wrapper">
         <div class="left-w">
-            <SortableListCard @qtySort="init" @changeBranch="handleBranchChange" :list="head[currentBranch]"
-                :branch="currentBranch" info="Top Products" />
+            <SortableListCard @qtySort="init" @changeBranch="handleBranchChange" @productClicked="handleProductInfo"
+                :list="head[currentBranch]" :branch="currentBranch" info="Top Products" />
         </div>
         <div class="right-w">
-            <SortableListCard @qtySort="init" @changeBranch="handleBranchChange" :list="tail[currentBranch]"
-                :branch="currentBranch" info="Bottom Products" />
+            <SortableListCard @qtySort="init" @changeBranch="handleBranchChange" @productClicked="handleProductInfo"
+                :list="tail[currentBranch]" :branch="currentBranch" info="Bottom Products" />
         </div>
     </div>
 </template>
@@ -16,8 +16,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
-    padding: 10px;
+    margin: 10px 0px;
 }
 
 .left-w,
@@ -25,6 +24,15 @@
     flex: 1 1 45%;
     max-width: 700px;
     min-width: 350px;
+    width: 48%;
+}
+
+.left-w {
+    margin-right: 1.75%;
+}
+
+.right-w {
+    margin-left: 1.75%;
 }
 
 @media (max-width: 768px) {
@@ -105,6 +113,10 @@ export default {
 
             this.currentBranch = branches[nextIndex];
         }, // handleBranchChange
+
+        handleProductInfo: function (productName) {
+            this.$emit('productAdded', productName);
+        } // handleProductInfo
 
     },
     mounted() {

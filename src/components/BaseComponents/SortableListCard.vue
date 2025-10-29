@@ -3,7 +3,9 @@
         <thead>
             <tr>
                 <th>
-                    <h1>{{ info }}</h1>
+                    <p style="font-size: 10px !important;"
+                        v-if="!info.includes('Top Products') || !info.includes('Bottom Products')">{{ info }}</p>
+                    <h1 v-else>{{ info }}</h1>
                 </th>
                 <th></th>
                 <th>
@@ -26,7 +28,7 @@
                 </td>
             </tr>
             <tr v-for="(item, idx) in list">
-                <td>{{ item[0] }}</td>
+                <td @click="this.$emit('productClicked', item[0])">{{ item[0] }}</td>
                 <td>{{ item[1] }}</td>
                 <td>PKR {{ Number(item[2]).toFixed(0) }}</td>
             </tr>
@@ -44,8 +46,7 @@
     border-radius: 18px;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     transition: 0.5s all;
-    min-width: 95% !important;
-    max-width: 100% !important;
+    width: 100%;
 
     td,
     th {
@@ -88,6 +89,12 @@
     }
 }
 
+tbody tr td:first-child {
+    text-decoration: underline;
+    cursor: pointer;
+    text-underline-offset: 4px;
+}
+
 .special-row {
     cursor: pointer;
     color: #000;
@@ -102,6 +109,12 @@
     border: none;
     cursor: pointer;
     width: 100%;
+}
+
+@media (max-width: 400px) {
+    * {
+        font-size: 10px;
+    }
 }
 </style>
 

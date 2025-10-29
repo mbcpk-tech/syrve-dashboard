@@ -10,6 +10,13 @@
         </div>
         <div class="charts">
             <BarChart v-if="dataLoaded" class="card chart bar" :chartData="dayWiseChartData" />
+            <SortableListCard v-if="selectedProductName && selectedItem[selectedProductName]"
+                class="pie chart list-card" @changeBranch="handleBranchChange"
+                :list="selectedItem[selectedProductName][currentBranch]" :branch="currentBranch"
+                :info="selectedProductName" />
+            <div class="card pie chart" v-else>
+                <h1>Click A Product</h1>
+            </div>
         </div>
     </div>
 </template>
@@ -23,6 +30,7 @@
 .pie {
     max-width: 33%;
     max-height: 60vh;
+    min-width: 33%;
 }
 
 .bar,
@@ -59,6 +67,7 @@ import BarChart from './BaseComponents/BarChart.vue';
 import PieChart from './BaseComponents/PieChart.vue';
 import LineChart from './BaseComponents/LineChart.vue';
 import DonutChart from './BaseComponents/DonutChart.vue';
+import SortableListCard from './BaseComponents/SortableListCard.vue';
 
 export default {
     name: "SalesCharts",
@@ -66,17 +75,21 @@ export default {
         BarChart,
         PieChart,
         LineChart,
-        DonutChart
+        DonutChart,
+        SortableListCard
     },
     props: {
         salesData: Object,
         hourlySalesData: Object,
         paymentWise: Object,
-        dayWise: Object
+        dayWise: Object,
+        selectedItem: Object,
+        selectedProductName: String
     },
     data() {
         return {
             dataLoaded: false,
+            currentBranch: "FoodPanda",
             pieChartData: {
                 data: {
                     labels: [],
@@ -116,17 +129,29 @@ export default {
     },
     methods: {
         salesProcessing: function () {
+            let monthsName = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sep", "Oct", "Nov", "Dec"];
             this.barChartData.data.labels = [];
             this.barChartData.data.datasets = [];
             const allMonths = new Set();
+            const monthMap = new Map();
             for (let key of Object.keys(this.salesData)) {
-                Object.keys(this.salesData[key]).forEach(month => allMonths.add(month));
+                Object.keys(this.salesData[key]).forEach(fullDateKey => {
+                    allMonths.add(fullDateKey);
+                    if (!monthMap.has(fullDateKey)) {
+                        let [year, monthNumberString] = fullDateKey.split("-");
+                        let monthIndex = parseInt(monthNumberString, 10) - 1;
+                        let monthName = monthsName[monthIndex];
+
+                        monthMap.set(fullDateKey, `${monthName} ${year}`);
+                    }
+                });
             }
-            this.barChartData.data.labels = Array.from(allMonths).sort();
+            const sortedDateKeys = Array.from(allMonths).sort();
+            this.barChartData.data.labels = sortedDateKeys.map(dateKey => monthMap.get(dateKey));
             for (let key of Object.keys(this.salesData)) {
                 let data = [];
-                this.barChartData.data.labels.forEach(month => {
-                    const value = this.salesData[key][month] ?? 0;
+                sortedDateKeys.forEach(dateKey => {
+                    const value = this.salesData[key][dateKey] ?? 0;
                     data.push(value);
                 });
                 this.barChartData.data.datasets.push({
@@ -137,20 +162,20 @@ export default {
             this.barChartData.data.datasets.forEach((dataset, i) => {
                 dataset.backgroundColor = this.$colors[i % this.$colors.length];
             });
+            this.barChartData.options["plugins"] = {
+                title: { display: true, text: 'Month Wise Sales', font: { size: 18 } }
+            };
 
             const pieLabels = [];
             const pieData = [];
             const pieColors = [];
-
             Object.keys(this.salesData).forEach((branch, i) => {
                 const total = Object.values(this.salesData[branch])
                     .reduce((sum, val) => sum + (val || 0), 0);
-
                 pieLabels.push(branch);
                 pieData.push(total);
                 pieColors.push(this.$colors[i % this.$colors.length]);
             });
-
             this.pieChartData = {
                 data: {
                     labels: pieLabels,
@@ -165,35 +190,37 @@ export default {
                     responsive: true,
                     plugins: {
                         legend: { position: 'bottom' },
-                        title: { display: true, text: 'Total Sales by Branch' }
+                        title: { display: true, text: 'Total Sales by Branch', font: { size: 18 } }
                     }
                 }
             }
 
             this.hourlyChartData = {
-                data: { labels: [], datasets: [] }
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Hour Wise Sales', font: { size: 18 } }
+                    }
+                }
             };
-
             const allHours = new Set();
             for (let key of Object.keys(this.hourlySalesData)) {
                 Object.keys(this.hourlySalesData[key]).forEach(hour => allHours.add(hour));
             }
-
             this.hourlyChartData.data.labels = Array.from(allHours).sort();
-
             for (let key of Object.keys(this.hourlySalesData)) {
                 let data = [];
                 this.hourlyChartData.data.labels.forEach(hour => {
                     const value = this.hourlySalesData[key][hour] ?? 0;
                     data.push(value);
                 });
-
                 this.hourlyChartData.data.datasets.push({
                     label: key,
                     data: data
                 });
             }
-
             this.hourlyChartData.data.datasets.forEach((dataset, i) => {
                 let color = this.$colors[i % this.$colors.length]
                 dataset.backgroundColor = color;
@@ -208,7 +235,6 @@ export default {
                 paymentData.push(this.paymentWise[payment]);
                 paymentColors.push(this.$colors[i % this.$colors.length]);
             });
-
             this.paymentWiseData = {
                 data: {
                     labels: paymentLabels,
@@ -223,12 +249,11 @@ export default {
                     responsive: true,
                     plugins: {
                         legend: { position: 'bottom' },
-                        title: { display: true, text: 'Payment Wise Sales' }
+                        title: { display: true, text: 'Payment Wise Sales', font: { size: 18 } }
                     }
                 }
             }
 
-            // DayWise
             const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
             this.dayWiseChartData.data.labels = daysOrder;
             Object.keys(this.dayWise).forEach((branch, i) => {
@@ -242,9 +267,21 @@ export default {
                     backgroundColor: color,
                 });
             });
-
+            this.dayWiseChartData.options["plugins"] = {
+                legend: { position: 'bottom' },
+                title: { display: true, text: 'Day Wise Sales', font: { size: 18 } }
+            }
             this.dataLoaded = true;
-        }
+
+        }, // saleProcessing
+
+        handleBranchChange: function () {
+            const branches = Object.keys(this.salesData);
+            if (branches.length === 0) return;
+            const currentIndex = branches.indexOf(this.currentBranch);
+            const nextIndex = (currentIndex + 1) % branches.length;
+            this.currentBranch = branches[nextIndex];
+        }, // handleBranchChange
     },
 
     mounted() {
